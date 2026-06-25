@@ -1,4 +1,4 @@
-package com.cameratracker
+package com.alchemist.mergemania
 
 import android.app.Application
 import com.facebook.react.PackageList
