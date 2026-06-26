@@ -1,5 +1,3 @@
-// Visual theme for tiles and the board (2048-inspired palette).
-
 export const COLORS = {
   background: '#faf8ef',
   boardBg: '#bbada0',
@@ -25,14 +23,13 @@ const TILE_COLORS: Record<number, string> = {
 };
 
 export function tileColor(value: number): string {
-  return TILE_COLORS[value] ?? '#3c3a32'; // dark slate for very high tiles
+  return TILE_COLORS[value] ?? '#3c3a32';
 }
 
 export function tileTextColor(value: number): string {
   return value <= 4 ? COLORS.text : COLORS.textLight;
 }
 
-/** Shrink the font for longer numbers so they fit inside a cell. */
 export function tileFontSize(value: number, cellSize: number): number {
   const digits = String(value).length;
   const base = cellSize * 0.42;

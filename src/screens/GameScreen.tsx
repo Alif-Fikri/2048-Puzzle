@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
   SafeAreaView,
   StatusBar,
@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import Board from '../components/Board';
 import { useGame } from '../game/useGame';
+import { maybeShowInterstitial, showRewarded } from '../ads/AdService';
 import {
   COLORS,
   tileColor,
@@ -27,14 +28,39 @@ function ScoreBox({ label, value }: { label: string; value: number }) {
   );
 }
 
-function GameScreen() {
-  const game = useGame();
+type Props = {
+  onExit: () => void;
+  initialBest: number;
+  onBest: (best: number) => void;
+};
+
+function GameScreen({ onExit, initialBest, onBest }: Props) {
+  const game = useGame(initialBest);
+
+  useEffect(() => {
+    onBest(game.best);
+  }, [game.best, onBest]);
+
+  const handleRevive = async () => {
+    const earned = await showRewarded();
+    if (earned) {
+      game.revive();
+    }
+  };
+
+  const handlePlayAgain = async () => {
+    await maybeShowInterstitial();
+    game.restart();
+  };
 
   return (
     <SafeAreaView style={styles.safe}>
       <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
       <View style={styles.container}>
         <View style={styles.header}>
+          <TouchableOpacity style={styles.homeBtn} onPress={onExit}>
+            <Text style={styles.homeBtnText}>‹</Text>
+          </TouchableOpacity>
           <Text style={styles.title}>Merge Mania</Text>
           <View style={styles.scoreRow}>
             <ScoreBox label="SCORE" value={game.score} />
@@ -74,8 +100,17 @@ function GameScreen() {
             <View style={styles.overlay}>
               <Text style={styles.overlayTitle}>Game Over</Text>
               <Text style={styles.overlayScore}>Score {game.score}</Text>
-              <TouchableOpacity style={styles.playAgain} onPress={game.restart}>
+              {game.canRevive && (
+                <TouchableOpacity style={styles.revive} onPress={handleRevive}>
+                  <Text style={styles.reviveIcon}>▶</Text>
+                  <Text style={styles.reviveText}>Revive · Watch Ad</Text>
+                </TouchableOpacity>
+              )}
+              <TouchableOpacity style={styles.playAgain} onPress={handlePlayAgain}>
                 <Text style={styles.playAgainText}>Play Again</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.overlayHome} onPress={onExit}>
+                <Text style={styles.overlayHomeText}>Home</Text>
               </TouchableOpacity>
             </View>
           )}
@@ -106,8 +141,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 8,
   },
+  homeBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 10,
+    backgroundColor: COLORS.boardBg,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  homeBtnText: {
+    color: COLORS.textLight,
+    fontSize: 28,
+    fontWeight: '900',
+    marginTop: -4,
+  },
   title: {
-    fontSize: 34,
+    fontSize: 22,
     fontWeight: '900',
     color: COLORS.text,
   },
@@ -187,6 +236,30 @@ const styles = StyleSheet.create({
     marginTop: 4,
     marginBottom: 20,
   },
+  revive: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#2e9e5b',
+    paddingVertical: 14,
+    paddingHorizontal: 28,
+    borderRadius: 12,
+    marginBottom: 14,
+    shadowColor: '#1b6b3c',
+    shadowOpacity: 0.4,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 5,
+  },
+  reviveIcon: {
+    color: '#fff',
+    fontSize: 14,
+    marginRight: 8,
+  },
+  reviveText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '800',
+  },
   playAgain: {
     backgroundColor: COLORS.accent,
     paddingVertical: 12,
@@ -197,6 +270,16 @@ const styles = StyleSheet.create({
     color: COLORS.textLight,
     fontSize: 18,
     fontWeight: '800',
+  },
+  overlayHome: {
+    marginTop: 14,
+    paddingVertical: 8,
+    paddingHorizontal: 22,
+  },
+  overlayHomeText: {
+    color: COLORS.text,
+    fontSize: 16,
+    fontWeight: '700',
   },
   restartBtn: {
     marginTop: 24,

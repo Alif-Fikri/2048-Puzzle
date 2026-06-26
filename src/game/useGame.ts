@@ -7,6 +7,7 @@ import {
   isGameOver,
   maxTile,
   randomSpawnValue,
+  reviveClear,
 } from './engine';
 
 export type GameState = {
@@ -14,15 +15,16 @@ export type GameState = {
   next: number;
   score: number;
   best: number;
-  best32: number; // highest tile reached this game, for milestone UI
+  best32: number;
   isOver: boolean;
+  revivedUsed: boolean;
 };
 
 export type Game = GameState & {
-  /** Drop the current `next` tile into a column. No-op if illegal or game over. */
+  canRevive: boolean;
   dropAt: (col: number) => void;
-  /** Start a fresh game (keeps best score). */
   restart: () => void;
+  revive: () => void;
 };
 
 function freshState(best: number): GameState {
@@ -33,11 +35,12 @@ function freshState(best: number): GameState {
     best,
     best32: 0,
     isOver: false,
+    revivedUsed: false,
   };
 }
 
-export function useGame(): Game {
-  const [state, setState] = useState<GameState>(() => freshState(0));
+export function useGame(initialBest: number = 0): Game {
+  const [state, setState] = useState<GameState>(() => freshState(initialBest));
 
   const dropAt = useCallback((col: number) => {
     setState(prev => {
@@ -50,6 +53,7 @@ export function useGame(): Game {
       }
       const score = prev.score + result.gained;
       return {
+        ...prev,
         grid: result.grid,
         next: randomSpawnValue(),
         score,
@@ -64,5 +68,25 @@ export function useGame(): Game {
     setState(prev => freshState(prev.best));
   }, []);
 
-  return { ...state, dropAt, restart };
+  const revive = useCallback(() => {
+    setState(prev => {
+      if (!prev.isOver || prev.revivedUsed) {
+        return prev;
+      }
+      return {
+        ...prev,
+        grid: reviveClear(prev.grid),
+        isOver: false,
+        revivedUsed: true,
+      };
+    });
+  }, []);
+
+  return {
+    ...state,
+    canRevive: state.isOver && !state.revivedUsed,
+    dropAt,
+    restart,
+    revive,
+  };
 }
